@@ -2,8 +2,10 @@
 'use client';
 
 import { useRef, useEffect, useState, KeyboardEvent } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { SendHorizontal, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 interface InputBarProps {
   onSend: (text: string) => void;
@@ -37,40 +39,42 @@ export default function InputBar({ onSend, isLoading }: InputBarProps) {
 
   return (
     <div className="
-      flex items-end gap-3 p-3 rounded-2xl
-      bg-[var(--bg-input)] border border-[var(--border)]
-      focus-within:border-[var(--accent)] transition-colors duration-150
+      flex items-end gap-3 p-4 rounded-2xl
+      bg-muted border border-border
+      focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all duration-150
     ">
-      <textarea
+      <Textarea
         ref={textareaRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
+        placeholder="Search products, check delivery, or ask anything..."
         disabled={isLoading}
         placeholder="Ask me to find products, check delivery, or place an order…"
         rows={1}
         className="
-          flex-1 resize-none bg-transparent outline-none
-          text-[var(--text-primary)] placeholder:text-[var(--text-muted)]
-          text-sm leading-relaxed py-1 max-h-40 overflow-y-auto
-          disabled:opacity-50
+          resize-none bg-transparent border-0 outline-none
+          text-foreground placeholder:text-muted-foreground
+          text-sm leading-relaxed py-0 max-h-40 overflow-y-auto
+          disabled:opacity-50 focus:ring-0 focus-visible:ring-0
         "
       />
-      <button
+      <Button
         onClick={handleSubmit}
         disabled={!value.trim() || isLoading}
+        size="icon"
         className={cn(
-          'flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150',
+          'shrink-0 rounded-xl transition-all duration-150',
           value.trim() && !isLoading
-            ? 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white'
-            : 'bg-[var(--bg-elevated)] text-[var(--text-muted)] cursor-not-allowed'
+            ? 'bg-accent hover:bg-accent/90 text-accent-foreground'
+            : 'bg-muted-foreground/20 text-muted-foreground cursor-not-allowed'
         )}
       >
         {isLoading
-          ? <Loader2 size={15} className="animate-spin" />
-          : <Send size={15} />
+          ? <Loader2 size={16} className="animate-spin" />
+          : <SendHorizontal size={16} />
         }
-      </button>
+      </Button>
     </div>
   );
 }

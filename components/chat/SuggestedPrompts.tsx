@@ -1,14 +1,15 @@
 // components/chat/SuggestedPrompts.tsx
 'use client';
 
-import { ShoppingBag, Cake, Flower2, Gift, Smartphone } from 'lucide-react';
+import { Cake, Flower, Gift, Smartphone, Candy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const PROMPTS = [
   { icon: Cake,        label: 'Birthday cakes',  prompt: 'Show me birthday cakes under LKR 3000' },
-  { icon: Flower2,     label: 'Fresh flowers',   prompt: 'Find fresh flower bouquets for delivery' },
+  { icon: Flower,      label: 'Fresh flowers',   prompt: 'Find fresh flower bouquets for delivery' },
   { icon: Gift,        label: 'Gift ideas',      prompt: 'What are popular gifts for anniversaries?' },
   { icon: Smartphone,  label: 'Electronics',     prompt: 'Show me mobile phones under LKR 50000' },
-  { icon: ShoppingBag, label: 'Chocolates',      prompt: 'Find premium chocolate boxes' },
+  { icon: Candy,   label: 'Chocolates',      prompt: 'Find premium chocolate boxes' },
 ] as const;
 
 interface SuggestedPromptsProps {
@@ -17,32 +18,32 @@ interface SuggestedPromptsProps {
 
 export default function SuggestedPrompts({ onSelect }: SuggestedPromptsProps) {
   return (
-    <div className="flex flex-col items-center gap-6 py-16 px-4">
-      <div className="text-center space-y-2">
-        <div className="text-5xl mb-4">🛍️</div>
-        <h1 className="text-2xl font-semibold text-(--text-primary)">
+    <div className="flex flex-col items-center gap-8 py-20 px-4">
+      <div className="text-center space-y-3">
+        <div className="text-6xl mb-4">✨🛒</div>
+        <h1 className="text-3xl font-bold text-foreground">
           Kapruka Shopping Agent
         </h1>
-        <p className="text-(--text-secondary) text-sm max-w-sm">
+        <p className="text-muted-foreground text-base max-w-sm">
           Ask me to find products, get delivery quotes, or place an order — anywhere in Sri Lanka.
         </p>
       </div>
-      <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+      <div className="flex flex-wrap justify-center gap-3 max-w-2xl">
         {PROMPTS.map(({ icon: Icon, label, prompt }) => (
-          <button
+          <Button
             key={label}
             onClick={() => onSelect(prompt)}
+            variant="outline"
             className="
-              flex items-center gap-2 px-4 py-2 rounded-full text-sm cursor-pointer
-              bg-(--bg-elevated) border border-[var(--border)]
-              text-[var(--text-secondary)] hover:text-[var(--text-primary)]
-              hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)]
+              flex items-center gap-2 px-4 py-5 rounded-full text-sm
+              border border-border
+              hover:bg-accent hover:text-accent-foreground
               transition-all duration-150
             "
           >
-            <Icon size={14} className="text-(--accent)" />
+            <Icon size={16} className="text-accent" />
             {label}
-          </button>
+          </Button>
         ))}
       </div>
     </div>

@@ -3,32 +3,17 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import MessageList from './MessageList';
 import InputBar from './InputBar';
 import SuggestedPrompts from './SuggestedPrompts';
+import { Card } from '@/components/ui/card';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { ModeSwitcher, type ShoppingMode } from '@/components/ModeSwitcher';
 
 export default function ChatShell() {
-  /**
-   * v5 useChat changes:
-   *
-   * 1. Import is now from '@ai-sdk/react', not 'ai/react'
-   *
-   * 2. transport: new DefaultChatTransport({ api }) replaces the bare api: string.
-   *    This abstraction allows swapping transports (WebSocket, custom) without
-   *    changing the hook's usage — a cleaner separation of concerns.
-   *
-   * 3. sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls
-   *    Replaces manual re-submission logic. After every tool result is received,
-   *    the SDK automatically sends the updated message back to /api/chat
-   *    so Gemini can continue the agentic loop. Without this, the loop stops
-   *    after the first tool call and never generates a final text response.
-   *
-   * 4. sendMessage({ text }) replaces handleSubmit(event).
-   *    More explicit, works without a form element.
-   *
-   * 5. messages now have a `parts` array instead of `toolInvocations`.
-   */
+  const [mode, setMode] = useState<ShoppingMode>('search');
+  
   const {
     messages,
     sendMessage,
@@ -45,31 +30,45 @@ export default function ChatShell() {
 
   const handleSend = useCallback((text: string) => {
     if (text.trim() && !isLoading) {
-      sendMessage({ text });
+      // Prepend mode context to the message
+      const modeContext = mode === 'quick' 
+        ? '[Quick Order Mode] '
+        : mode === 'delivery'
+        ? '[Delivery & Tracking Mode] '
+        : '';
+      sendMessage({ text: modeContext + text });
     }
-  }, [sendMessage, isLoading]);
+  }, [sendMessage, isLoading, mode]);
 
   return (
-    <div className="h-screen flex flex-col bg-(--bg-base)">
+    <div className="h-screen flex flex-col bg-background">
 
       {/* Header */}
       <header className="
-        shrink-0 flex items-center gap-3 px-5 py-3
-        border-b border-(--border) bg-(--bg-surface)
+        shrink-0 flex items-center justify-between gap-4 px-4 py-3
+        border-b border-border bg-card
       ">
-        <span className="text-xl">🛍️</span>
-        <div>
-          <h1 className="text-sm font-semibold text-(--text-primary) leading-none">
-            Kapruka Agent
-          </h1>
-          <p className="text-xs text-(--text-muted) mt-0.5">
-            AI-powered shopping for Sri Lanka
-          </p>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="text-2xl font-bold bg-linear-to-r from-accent to-accent/70 bg-clip-text text-transparent">
+            ✨
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-foreground leading-none">
+              Kapruka Agent
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              AI-powered shopping for Sri Lanka
+            </p>
+          </div>
+          <div className="ml-2 flex items-center gap-1.5 px-2 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Live</span>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-(--text-muted)">Live</span>
-        </div>
+        
+        <ModeSwitcher currentMode={mode} onModeChange={setMode} />
+        
+        <ThemeSwitcher />
       </header>
 
       {/* Message area */}
@@ -81,13 +80,13 @@ export default function ChatShell() {
       </main>
 
       {/* Input */}
-      <footer className="shrink-0 p-4 border-t border-(--border) bg-(--bg-surface)">
+      <footer className="shrink-0 p-4 border-t border-border bg-card">
         <div className="max-w-3xl mx-auto">
           <InputBar
             onSend={handleSend}
             isLoading={isLoading}
           />
-          <p className="text-center text-xs text-(--text-muted) mt-2">
+          <p className="text-center text-xs text-muted-foreground mt-3">
             Powered by Gemini · Kapruka MCP · Vercel AI SDK v5
           </p>
         </div>

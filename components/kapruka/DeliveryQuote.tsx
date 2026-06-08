@@ -3,6 +3,7 @@
 
 import { Truck, Clock, MapPin, CheckCircle2 } from 'lucide-react';
 import { formatLKR, cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
 
 interface DeliveryOption {
   type?: string;
@@ -36,7 +37,6 @@ function normalise(data: unknown): { city: string; productName: string; options:
   const city        = d.city ?? d.deliveryCity ?? '';
   const productName = d.productName ?? d.product ?? '';
 
-  // Options can be in an array or as individual keys
   let options: DeliveryOption[] = [];
   if (Array.isArray(d.options))         options = d.options;
   else if (Array.isArray(d.deliveryOptions)) options = d.deliveryOptions;
@@ -56,22 +56,22 @@ function OptionCard({ option, index }: { option: DeliveryOption; index: number }
   const isExpress = label.toLowerCase().includes('express');
 
   return (
-    <div className={cn(
-      'flex items-center justify-between p-4 rounded-xl border transition-colors',
+    <Card className={cn(
+      'flex items-center justify-between p-4 border transition-all',
       isExpress
-        ? 'border-[var(--accent)] bg-[var(--accent-subtle)]'
-        : 'border-[var(--border)] bg-[var(--bg-surface)]'
+        ? 'border-accent bg-accent/5'
+        : 'border-border'
     )}>
       <div className="flex items-center gap-3">
         <div className={cn(
           'w-9 h-9 rounded-full flex items-center justify-center',
-          isExpress ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)]'
+          isExpress ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
         )}>
           <Truck size={16} />
         </div>
         <div>
-          <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
-          <div className="flex items-center gap-1 text-xs text-[var(--text-secondary)] mt-0.5">
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
             <Clock size={10} />
             <span>
               {eta ?? (days !== undefined ? `${days} day${days !== 1 ? 's' : ''}` : 'Contact for ETA')}
@@ -80,14 +80,14 @@ function OptionCard({ option, index }: { option: DeliveryOption; index: number }
         </div>
       </div>
       <div className="text-right">
-        <p className="text-sm font-bold text-[var(--text-primary)]">
+        <p className="text-sm font-bold text-foreground">
           {price === 0 ? 'Free' : formatLKR(price)}
         </p>
         {isExpress && (
-          <span className="text-[10px] text-[var(--accent)] font-medium">Fastest</span>
+          <span className="text-[10px] text-accent font-medium">Fastest</span>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -95,19 +95,19 @@ export default function DeliveryQuote({ data }: { data: unknown }) {
   const { city, productName, options } = normalise(data);
 
   return (
-    <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden">
+    <Card className="w-full border-border overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
-        <MapPin size={15} className="text-[var(--accent)]" />
-        <div>
-          <p className="text-sm font-semibold text-[var(--text-primary)]">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted">
+        <MapPin size={16} className="text-accent flex-shrink-0" />
+        <div className="flex-grow">
+          <p className="text-sm font-semibold text-foreground">
             Delivery to {city || 'your address'}
           </p>
           {productName && (
-            <p className="text-xs text-[var(--text-secondary)]">{productName}</p>
+            <p className="text-xs text-muted-foreground">{productName}</p>
           )}
         </div>
-        <CheckCircle2 size={15} className="ml-auto text-emerald-400" />
+        <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
       </div>
 
       {/* Options */}
@@ -115,11 +115,11 @@ export default function DeliveryQuote({ data }: { data: unknown }) {
         {options.length > 0 ? (
           options.map((opt, i) => <OptionCard key={i} option={opt} index={i} />)
         ) : (
-          <p className="text-sm text-[var(--text-secondary)] py-2">
+          <p className="text-sm text-muted-foreground py-2">
             No delivery options available for this location.
           </p>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

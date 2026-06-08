@@ -3,11 +3,10 @@
 
 import { ShoppingCart, Star, Package } from 'lucide-react';
 import { formatLKR, truncate, cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
-/*
- * Kapruka product shape — we use a loose type because MCP dynamic tools
- * return `unknown`. We defensively access every field.
- */
 interface KaprukProduct {
   id?: string;
   name?: string;
@@ -25,11 +24,6 @@ interface ProductGridProps {
   data: unknown;
 }
 
-/*
- * normalise() — converts whatever shape Kapruka returns into a clean array.
- * MCP tool results can come back as an array directly, or wrapped in a
- * { products: [...] } or { results: [...] } envelope. We handle all three.
- */
 function normalise(data: unknown): KaprukProduct[] {
   if (!data) return [];
   if (Array.isArray(data)) return data as KaprukProduct[];
@@ -55,13 +49,12 @@ function ProductCard({ product }: { product: KaprukProduct }) {
     : null;
 
   return (
-    <div className="
-      group relative flex flex-col overflow-hidden rounded-2xl
-      bg-(--bg-elevated) border border-(--border)
-      hover:border-(--accent) transition-all duration-200
+    <Card className="
+      group relative flex flex-col overflow-hidden
+      border-border hover:border-accent transition-all duration-200
     ">
       {/* Image area */}
-      <div className="relative aspect-square bg-(--bg-surface) overflow-hidden">
+      <div className="relative aspect-square bg-muted overflow-hidden">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -71,15 +64,15 @@ function ProductCard({ product }: { product: KaprukProduct }) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package size={40} className="text-(--text-muted)" />
+            <Package size={40} className="text-muted-foreground" />
           </div>
         )}
 
         {/* Discount badge */}
         {discount && (
-          <div className="absolute top-2 left-2 bg-(--accent) text-white text-xs font-bold px-2 py-0.5 rounded-full">
+          <Badge className="absolute top-2 left-2 bg-accent text-accent-foreground text-xs font-bold px-2 py-0.5 rounded-full">
             -{discount}%
-          </div>
+          </Badge>
         )}
 
         {/* Out of stock overlay */}
@@ -93,14 +86,14 @@ function ProductCard({ product }: { product: KaprukProduct }) {
       </div>
 
       {/* Info area */}
-      <div className="flex flex-col gap-2 p-3">
+      <div className="flex flex-col gap-2 p-3 flex-grow">
         {category && (
-          <span className="text-[10px] uppercase tracking-wider text-(--accent) font-medium">
+          <span className="text-[10px] uppercase tracking-wider text-accent font-medium">
             {category}
           </span>
         )}
 
-        <p className="text-sm font-medium text-(--text-primary) leading-snug">
+        <p className="text-sm font-medium text-foreground leading-snug line-clamp-2">
           {truncate(name, 60)}
         </p>
 
@@ -108,39 +101,39 @@ function ProductCard({ product }: { product: KaprukProduct }) {
         {rating !== null && (
           <div className="flex items-center gap-1">
             <Star size={11} className="text-amber-400 fill-amber-400" />
-            <span className="text-xs text-(--text-secondary)">
+            <span className="text-xs text-muted-foreground">
               {rating.toFixed(1)}
             </span>
           </div>
         )}
 
         {/* Price row */}
-        <div className="flex items-baseline gap-2 mt-auto">
-          <span className="text-base font-bold text-(--text-primary)">
+        <div className="flex items-baseline gap-2 mt-auto pt-2">
+          <span className="text-base font-bold text-foreground">
             {formatLKR(price)}
           </span>
           {original && original > price && (
-            <span className="text-xs text-(--text-muted) line-through">
+            <span className="text-xs text-muted-foreground line-through">
               {formatLKR(original)}
             </span>
           )}
         </div>
 
         {/* CTA */}
-        <button
+        <Button
           disabled={!available}
+          variant={available ? 'default' : 'outline'}
+          size="sm"
           className={cn(
-            'mt-1 flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-medium transition-all duration-150',
-            available
-              ? 'bg-(--accent-subtle) text-(--accent) hover:bg-(--accent) hover:text-white border border-(--accent)'
-              : 'bg-(--bg-surface) text-(--text-muted) cursor-not-allowed border border-(--border)'
+            'mt-2 w-full flex items-center justify-center gap-2 rounded-lg transition-all duration-150',
+            !available && 'cursor-not-allowed opacity-50'
           )}
         >
-          <ShoppingCart size={12} />
+          <ShoppingCart size={14} />
           {available ? 'Add to Order' : 'Unavailable'}
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -149,19 +142,19 @@ export default function ProductGrid({ data }: ProductGridProps) {
 
   if (products.length === 0) {
     return (
-      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-(--bg-elevated) border border-(--border) text-sm text-(--text-secondary)">
-        <Package size={16} className="text-(--text-muted)" />
+      <Card className="flex items-center gap-3 px-4 py-3 border-border text-sm text-muted-foreground">
+        <Package size={16} className="text-muted-foreground" />
         No products found. Try a different search term.
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className="w-full space-y-3">
-      <p className="text-xs text-(--text-muted)">
+      <p className="text-xs text-muted-foreground">
         {products.length} result{products.length !== 1 ? 's' : ''} from Kapruka
       </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {products.map((product, i) => (
           <ProductCard key={product.id ?? i} product={product} />
         ))}
