@@ -10,8 +10,9 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "ai": "^6.0.196",
+    "@ai-sdk/mcp": "^1.0.46",
+    "@ai-sdk/react": "^3.0.199",
+    "ai": "^6.0.197",
     "clsx": "^2.1.1",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
