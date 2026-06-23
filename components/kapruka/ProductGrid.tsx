@@ -1,7 +1,7 @@
 // components/kapruka/ProductGrid.tsx
 'use client';
 
-import { ShoppingCart, Star, Package } from 'lucide-react';
+import { ShoppingCart, Star, Package, ExternalLink } from 'lucide-react';
 import { formatLKR, truncate, cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,21 +18,71 @@ interface KaprukProduct {
   rating?: number;
   available?: boolean;
   inStock?: boolean;
+  url?: string;
 }
 
 interface ProductGridProps {
   data: unknown;
 }
 
+// Parses the Kapruka MCP markdown format:
+// **N. Product Name** ID: `SKU` · LKR PRICE · In stock (low) · ships internationally [View product](url)
+function parseMarkdownProducts(text: string): KaprukProduct[] {
+  const products: KaprukProduct[] = [];
+  const re = /\*\*\d+\.\s+(.+?)\*\*\s*ID:\s*`([^`]+)`\s*·\s*LKR\s*([\d,]+)\s*·\s*(.*?)\[View product\]\(([^)]+)\)/gs;
+
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const [, name, id, priceStr, statusPart, url] = m;
+    const price = parseInt(priceStr.replace(/,/g, ''), 10);
+    const available = !statusPart.toLowerCase().includes('out of stock');
+    // Decode malformed HTML entity artifacts like n#176; → ° (degree sign)
+    const cleanName = name.trim().replace(/n#(\d+);/g, (_, n) => String.fromCharCode(+n));
+    products.push({
+      id: id.trim(),
+      name: cleanName,
+      price: isNaN(price) ? 0 : price,
+      available,
+      url: url.trim(),
+    });
+  }
+  return products;
+}
+
 function normalise(data: unknown): KaprukProduct[] {
   if (!data) return [];
   if (Array.isArray(data)) return data as KaprukProduct[];
+
+  if (typeof data === 'string') {
+    try { return normalise(JSON.parse(data)); } catch { /* not JSON */ }
+    return parseMarkdownProducts(data);
+  }
+
   if (typeof data === 'object') {
     const d = data as Record<string, unknown>;
     if (Array.isArray(d.products)) return d.products as KaprukProduct[];
     if (Array.isArray(d.results))  return d.results  as KaprukProduct[];
     if (Array.isArray(d.items))    return d.items    as KaprukProduct[];
+    if (Array.isArray(d.data))     return d.data     as KaprukProduct[];
+
+    // MCP content array: { content: [{ type: "text", text: "..." }] }
+    if (Array.isArray(d.content)) {
+      for (const item of d.content as Array<{ type: string; text?: string }>) {
+        if (item.type === 'text' && item.text) {
+          try {
+            const r = normalise(JSON.parse(item.text));
+            if (r.length > 0) return r;
+          } catch { /* not JSON */ }
+          const r = parseMarkdownProducts(item.text);
+          if (r.length > 0) return r;
+        }
+      }
+    }
+
+    // Single product object
+    if (d.name || d.id) return [d as KaprukProduct];
   }
+
   return [];
 }
 
@@ -44,6 +94,7 @@ function ProductCard({ product }: { product: KaprukProduct }) {
   const category  = product.category ?? '';
   const rating    = product.rating   ?? null;
   const available = product.available ?? product.inStock ?? true;
+  const url       = product.url;
   const discount  = original && original > price
     ? Math.round((1 - price / original) * 100)
     : null;
@@ -120,18 +171,27 @@ function ProductCard({ product }: { product: KaprukProduct }) {
         </div>
 
         {/* CTA */}
-        <Button
-          disabled={!available}
-          variant={available ? 'default' : 'outline'}
-          size="sm"
-          className={cn(
-            'mt-2 w-full flex items-center justify-center gap-2 rounded-lg transition-all duration-150',
-            !available && 'cursor-not-allowed opacity-50'
+        <div className="mt-2 flex gap-2">
+          <Button
+            disabled={!available}
+            variant={available ? 'default' : 'outline'}
+            size="sm"
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 rounded-lg transition-all duration-150',
+              !available && 'cursor-not-allowed opacity-50'
+            )}
+          >
+            <ShoppingCart size={14} />
+            {available ? 'Add to Order' : 'Unavailable'}
+          </Button>
+          {url && (
+            <a href={url} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="rounded-lg px-2">
+                <ExternalLink size={14} />
+              </Button>
+            </a>
           )}
-        >
-          <ShoppingCart size={14} />
-          {available ? 'Add to Order' : 'Unavailable'}
-        </Button>
+        </div>
       </div>
     </Card>
   );
@@ -141,10 +201,21 @@ export default function ProductGrid({ data }: ProductGridProps) {
   const products = normalise(data);
 
   if (products.length === 0) {
+    const rawText = (() => {
+      if (!data || typeof data !== 'object') return null;
+      const d = data as Record<string, unknown>;
+      if (Array.isArray(d.content)) {
+        const t = (d.content as Array<{ type: string; text?: string }>)
+          .find(c => c.type === 'text' && c.text);
+        return t?.text ?? null;
+      }
+      return null;
+    })();
+
     return (
-      <Card className="flex items-center gap-3 px-4 py-3 border-border text-sm text-muted-foreground">
-        <Package size={16} className="text-muted-foreground" />
-        No products found. Try a different search term.
+      <Card className="flex items-start gap-3 px-4 py-3 border-border text-sm text-muted-foreground">
+        <Package size={16} className="shrink-0 mt-0.5" />
+        <span>{rawText ?? 'No products found. Try a different search term.'}</span>
       </Card>
     );
   }

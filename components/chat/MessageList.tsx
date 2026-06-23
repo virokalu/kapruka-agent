@@ -83,8 +83,8 @@ export default function MessageList({ messages, isLoading }: MessageListProps) {
         >
           {message.role === 'assistant' && (
             <Avatar className="shrink-0 mt-1">
-              <AvatarFallback className="bg-linear-to-br from-accent to-accent/60 border border-accent text-lg font-bold">
-                <ShoppingCart size={20} className="text-accent-foreground" />
+              <AvatarFallback className="bg-accent/10 border border-accent/40">
+                <Sparkles size={16} className="text-accent" />
               </AvatarFallback>
             </Avatar>
           )}
@@ -130,27 +130,36 @@ export default function MessageList({ messages, isLoading }: MessageListProps) {
         </div>
       ))}
 
-      {/* Typing indicator */}
-      {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-        <div className="flex gap-3 justify-start">
-          <Avatar className="shrink-0">
-            <AvatarFallback className="bg-linear-to-br from-accent to-accent/60 border border-accent text-lg font-bold">
-              <ShoppingCart size={20} className="text-accent-foreground" />
-            </AvatarFallback>
-          </Avatar>
-          <Card className="bg-card border-border rounded-bl-none px-4 py-3">
-            <div className="flex gap-1.5 items-center h-4">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="w-2 h-2 rounded-full bg-accent animate-bounce"
-                  style={{ animationDelay: `${i * 150}ms` }}
-                />
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Typing indicator — show when loading and no assistant text is streaming yet */}
+      {(() => {
+        const lastMsg = messages[messages.length - 1];
+        const showTyping = isLoading && (
+          !lastMsg ||
+          lastMsg.role !== 'assistant' ||
+          !lastMsg.parts.some(p => p.type === 'text' && (p as { text?: string }).text)
+        );
+        if (!showTyping) return null;
+        return (
+          <div className="flex gap-3 justify-start">
+            <Avatar className="shrink-0">
+              <AvatarFallback className="bg-accent/10 border border-accent/40">
+                <Sparkles size={16} className="text-accent" />
+              </AvatarFallback>
+            </Avatar>
+            <Card className="bg-card border-border rounded-bl-none px-4 py-3">
+              <div className="flex gap-1.5 items-center h-4">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"
+                    style={{ animationDelay: `${i * 150}ms` }}
+                  />
+                ))}
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
 
       <div ref={bottomRef} />
     </div>
