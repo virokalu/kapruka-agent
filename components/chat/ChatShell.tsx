@@ -41,7 +41,8 @@ export default function ChatShell() {
   }, [sendMessage, isLoading, mode]);
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen bg-background flex justify-center">
+    <div className="w-full max-w-4xl flex flex-col h-full">
 
       {/* Header */}
       <header className="
@@ -49,7 +50,7 @@ export default function ChatShell() {
         border-b border-border bg-card
       ">
         <div className="flex items-center gap-3 flex-1">
-          <div className="text-2xl font-bold bg-linear-to-r from-accent to-accent/70 bg-clip-text text-transparent">
+          <div className="text-2xl font-bold text-foreground">
             ✨
           </div>
           <div>
@@ -92,6 +93,7 @@ export default function ChatShell() {
         </div>
       </footer>
 
+    </div>
     </div>
   );
 }
