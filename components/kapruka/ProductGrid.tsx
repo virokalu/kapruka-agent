@@ -1,6 +1,7 @@
 // components/kapruka/ProductGrid.tsx
 'use client';
 
+import { useState, useEffect } from 'react';
 import { ShoppingCart, Star, Package, ExternalLink } from 'lucide-react';
 import { formatLKR, truncate, cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -12,13 +13,17 @@ interface KaprukProduct {
   name?: string;
   price?: number;
   originalPrice?: number;
+  compare_at_price?: { amount: number; currency: string };
   image?: string;
   imageUrl?: string;
-  category?: string;
+  image_url?: string;          // JSON format from kapruka_search_products
+  category?: string | { name?: string };
   rating?: number;
   available?: boolean;
   inStock?: boolean;
+  in_stock?: boolean;          // JSON format
   url?: string;
+  summary?: string;
 }
 
 interface ProductGridProps {
@@ -88,16 +93,32 @@ function normalise(data: unknown): KaprukProduct[] {
 
 function ProductCard({ product }: { product: KaprukProduct }) {
   const name      = product.name     ?? 'Product';
-  const price     = product.price    ?? 0;
-  const original  = product.originalPrice;
-  const image     = product.image    ?? product.imageUrl;
-  const category  = product.category ?? '';
+  // JSON format uses price: { amount, currency }; markdown parser sets price directly
+  const priceRaw  = product.price ?? (product as unknown as { price?: { amount?: number } }).price?.amount ?? 0;
+  const price     = typeof priceRaw === 'object' ? (priceRaw as { amount?: number }).amount ?? 0 : priceRaw;
+  const original  = product.originalPrice ?? product.compare_at_price?.amount;
+  const categoryRaw = product.category;
+  const category  = typeof categoryRaw === 'object' ? (categoryRaw as { name?: string }).name ?? '' : categoryRaw ?? '';
   const rating    = product.rating   ?? null;
-  const available = product.available ?? product.inStock ?? true;
+  const available = product.available ?? product.inStock ?? product.in_stock ?? true;
   const url       = product.url;
   const discount  = original && original > price
     ? Math.round((1 - price / original) * 100)
     : null;
+
+  const [imgSrc, setImgSrc] = useState<string | null>(
+    product.image ?? product.imageUrl ?? product.image_url ?? null
+  );
+
+  useEffect(() => {
+    if (imgSrc || !product.id) return;
+    fetch(`/api/product-image?id=${encodeURIComponent(product.id)}`)
+      .then(r => r.json())
+      .then(({ imageUrl }: { imageUrl: string | null }) => {
+        if (imageUrl) setImgSrc(imageUrl);
+      })
+      .catch(() => {});
+  }, [product.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Card className="
@@ -106,16 +127,17 @@ function ProductCard({ product }: { product: KaprukProduct }) {
     ">
       {/* Image area */}
       <div className="relative aspect-square bg-muted overflow-hidden">
-        {image ? (
+        {imgSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={image}
+            src={imgSrc}
             alt={name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImgSrc(null)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package size={40} className="text-muted-foreground" />
+            <Package size={40} className="text-muted-foreground animate-pulse" />
           </div>
         )}
 

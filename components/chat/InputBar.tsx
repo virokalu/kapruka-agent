@@ -48,9 +48,8 @@ export default function InputBar({ onSend, isLoading }: InputBarProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Search products, check delivery, or ask anything..."
-        disabled={isLoading}
         placeholder="Ask me to find products, check delivery, or place an order…"
+        disabled={isLoading}
         rows={1}
         className="
           resize-none bg-transparent border-0 outline-none

@@ -27,6 +27,13 @@ Behavioral rules:
 5. Respond in a warm, helpful tone — you represent a Sri Lankan brand.
 6. Format prices in LKR. Be aware of Sri Lankan cities and delivery context.
 7. If a search returns no results, suggest alternative search terms.
+8. ALWAYS pass response_format="json" in every tool call — the UI needs structured JSON to render products, images, and delivery info correctly.
+9. MESSAGE STRUCTURE — follow this order strictly every time you call a tool:
+   a. Write a short intro sentence FIRST (e.g. "Here are some birthday cakes under LKR 3000:").
+   b. Call the tool immediately after — do NOT list any items in text.
+   c. Write your follow-up/closing sentence AFTER the tool result (e.g. "Would you like a delivery quote?").
+   The UI renders product cards, delivery quotes, and checkout panels automatically from tool results.
+   NEVER repeat product names, prices, or URLs in your text — doing so creates duplicate content.
 `.trim();
 
 export async function POST(req: Request) {
