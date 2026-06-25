@@ -1,10 +1,8 @@
-// components/chat/InputBar.tsx
 'use client';
 
 import { useRef, useEffect, useState, KeyboardEvent } from 'react';
-import { SendHorizontal, Loader2, Sparkles } from 'lucide-react';
+import { SendHorizontal, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 interface InputBarProps {
@@ -27,6 +25,7 @@ export default function InputBar({ onSend, isLoading }: InputBarProps) {
     if (value.trim() && !isLoading) {
       onSend(value.trim());
       setValue('');
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
     }
   };
 
@@ -37,43 +36,40 @@ export default function InputBar({ onSend, isLoading }: InputBarProps) {
     }
   };
 
+  const canSend = value.trim().length > 0 && !isLoading;
+
   return (
-    <div className="
-      flex items-end gap-3 p-4 rounded-2xl
-      bg-muted border border-border
-      focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all duration-150
-    ">
+    <div className={cn(
+      'flex items-end gap-2 px-3 py-2.5 rounded-2xl border bg-card transition-all duration-200',
+      'focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20',
+      isLoading && 'opacity-80'
+    )}>
       <Textarea
         ref={textareaRef}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={e => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Ask me to find products, check delivery, or place an order…"
+        placeholder="Search products, check delivery, place an order…"
         disabled={isLoading}
         rows={1}
-        className="
-          resize-none bg-transparent border-0 outline-none
-          text-foreground placeholder:text-muted-foreground
-          text-sm leading-relaxed py-0 max-h-40 overflow-y-auto
-          disabled:opacity-50 focus:ring-0 focus-visible:ring-0
-        "
+        className="flex-1 resize-none bg-transparent border-0 shadow-none outline-none text-sm leading-relaxed py-0.5 text-foreground placeholder:text-muted-foreground/60 disabled:opacity-60 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 min-h-0"
       />
-      <Button
+      <button
         onClick={handleSubmit}
-        disabled={!value.trim() || isLoading}
-        size="icon"
+        disabled={!canSend}
+        aria-label="Send"
         className={cn(
-          'shrink-0 rounded-xl transition-all duration-150',
-          value.trim() && !isLoading
-            ? 'bg-accent hover:bg-accent/90 text-accent-foreground'
-            : 'bg-muted-foreground/20 text-muted-foreground cursor-not-allowed'
+          'shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150',
+          canSend
+            ? 'bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm shadow-accent/30'
+            : 'bg-muted text-muted-foreground cursor-not-allowed'
         )}
       >
         {isLoading
-          ? <Loader2 size={16} className="animate-spin" />
-          : <SendHorizontal size={16} />
+          ? <Loader2 size={14} className="animate-spin" />
+          : <SendHorizontal size={14} />
         }
-      </Button>
+      </button>
     </div>
   );
 }

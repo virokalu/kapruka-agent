@@ -1,9 +1,7 @@
-// components/kapruka/DeliveryQuote.tsx
 'use client';
 
-import { Truck, Clock, MapPin, CheckCircle2 } from 'lucide-react';
+import { Truck, Clock, MapPin, CheckCircle2, Zap } from 'lucide-react';
 import { formatLKR, cn } from '@/lib/utils';
-import { Card } from '@/components/ui/card';
 
 interface DeliveryOption {
   type?: string;
@@ -38,7 +36,7 @@ function normalise(data: unknown): { city: string; productName: string; options:
   const productName = d.productName ?? d.product ?? '';
 
   let options: DeliveryOption[] = [];
-  if (Array.isArray(d.options))         options = d.options;
+  if (Array.isArray(d.options))              options = d.options;
   else if (Array.isArray(d.deliveryOptions)) options = d.deliveryOptions;
   else {
     if (d.standardDelivery) options.push({ label: 'Standard', ...d.standardDelivery });
@@ -48,7 +46,7 @@ function normalise(data: unknown): { city: string; productName: string; options:
   return { city, productName, options };
 }
 
-function OptionCard({ option, index }: { option: DeliveryOption; index: number }) {
+function OptionRow({ option, index }: { option: DeliveryOption; index: number }) {
   const label    = option.label ?? option.name ?? option.type ?? `Option ${index + 1}`;
   const price    = option.price ?? option.cost ?? option.fee ?? 0;
   const days     = option.estimatedDays ?? option.days;
@@ -56,38 +54,42 @@ function OptionCard({ option, index }: { option: DeliveryOption; index: number }
   const isExpress = label.toLowerCase().includes('express');
 
   return (
-    <Card className={cn(
-      'flex items-center justify-between p-4 border transition-all',
+    <div className={cn(
+      'flex items-center gap-3 p-3 rounded-xl border transition-all',
       isExpress
-        ? 'border-accent bg-accent/5'
-        : 'border-border'
+        ? 'border-accent/30 bg-accent/5 shadow-sm shadow-accent/10'
+        : 'border-border bg-card'
     )}>
-      <div className="flex items-center gap-3">
-        <div className={cn(
-          'w-9 h-9 rounded-full flex items-center justify-center',
-          isExpress ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
-        )}>
-          <Truck size={16} />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-foreground">{label}</p>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-            <Clock size={10} />
-            <span>
-              {eta ?? (days !== undefined ? `${days} day${days !== 1 ? 's' : ''}` : 'Contact for ETA')}
+      <div className={cn(
+        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+        isExpress ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
+      )}>
+        {isExpress ? <Zap size={14} /> : <Truck size={14} />}
+      </div>
+
+      <div className="flex-grow min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-foreground">{label}</p>
+          {isExpress && (
+            <span className="px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-[9px] font-bold uppercase tracking-wider">
+              Fastest
             </span>
-          </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+          <Clock size={9} />
+          <span>
+            {eta ?? (days !== undefined ? `${days} day${days !== 1 ? 's' : ''}` : 'Contact for ETA')}
+          </span>
         </div>
       </div>
-      <div className="text-right">
-        <p className="text-sm font-bold text-foreground">
-          {price === 0 ? 'Free' : formatLKR(price)}
+
+      <div className="text-right shrink-0">
+        <p className={cn('text-sm font-bold', isExpress ? 'text-accent' : 'text-foreground')}>
+          {price === 0 ? <span className="text-emerald-500">Free</span> : formatLKR(price)}
         </p>
-        {isExpress && (
-          <span className="text-[10px] text-accent font-medium">Fastest</span>
-        )}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -95,31 +97,29 @@ export default function DeliveryQuote({ data }: { data: unknown }) {
   const { city, productName, options } = normalise(data);
 
   return (
-    <Card className="w-full border-border overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted">
-        <MapPin size={16} className="text-accent flex-shrink-0" />
-        <div className="flex-grow">
-          <p className="text-sm font-semibold text-foreground">
+    <div className="w-full rounded-2xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-muted/50">
+        <MapPin size={14} className="text-accent shrink-0" />
+        <div className="flex-grow min-w-0">
+          <p className="text-xs font-semibold text-foreground truncate">
             Delivery to {city || 'your address'}
           </p>
           {productName && (
-            <p className="text-xs text-muted-foreground">{productName}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{productName}</p>
           )}
         </div>
-        <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
       </div>
 
-      {/* Options */}
-      <div className="p-4 space-y-3">
+      <div className="p-3 space-y-2">
         {options.length > 0 ? (
-          options.map((opt, i) => <OptionCard key={i} option={opt} index={i} />)
+          options.map((opt, i) => <OptionRow key={i} option={opt} index={i} />)
         ) : (
-          <p className="text-sm text-muted-foreground py-2">
+          <p className="text-xs text-muted-foreground py-2 px-1">
             No delivery options available for this location.
           </p>
         )}
       </div>
-    </Card>
+    </div>
   );
 }
