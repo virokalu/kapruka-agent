@@ -51,7 +51,7 @@ export async function POST(req: Request) {
   const { client, tools } = await getMcpTools();
 
   const result = streamText({
-    model: google('gemini-2.5-flash'),
+    model: google(process.env.AI_MODEL ?? 'gemini-3.1-flash-lite'),
     system: SYSTEM_PROMPT,
 
     /**

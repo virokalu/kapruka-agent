@@ -2,16 +2,18 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import MessageList from './MessageList';
 import InputBar from './InputBar';
 import SuggestedPrompts from './SuggestedPrompts';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { ModeSwitcher, type ShoppingMode } from '@/components/ModeSwitcher';
 import { ShoppingBag } from 'lucide-react';
+import OrderFormModal, { detectOrderFormNeeded, type OrderFormData } from '@/components/kapruka/OrderFormModal';
 
 export default function ChatShell() {
   const [mode, setMode] = useState<ShoppingMode>('search');
+  const [orderFormOpen, setOrderFormOpen] = useState(false);
 
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({ api: '/api/chat' }),
@@ -19,16 +21,46 @@ export default function ChatShell() {
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
-  const isEmpty = messages.length === 0;
+  const isEmpty   = messages.length === 0;
 
   const handleSend = useCallback((text: string) => {
     if (text.trim() && !isLoading) {
       const modeContext =
-        mode === 'quick' ? '[Quick Order Mode] ' :
+        mode === 'quick'    ? '[Quick Order Mode] ' :
         mode === 'delivery' ? '[Delivery & Tracking Mode] ' : '';
       sendMessage({ text: modeContext + text });
     }
   }, [sendMessage, isLoading, mode]);
+
+  // Detect when AI asks for order details and open the form
+  useEffect(() => {
+    if (isLoading) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant') return;
+
+    const fullText = last.parts
+      .filter(p => p.type === 'text')
+      .map(p => ('text' in p ? p.text : ''))
+      .join(' ');
+
+    if (detectOrderFormNeeded(fullText)) {
+      setOrderFormOpen(true);
+    }
+  }, [messages, isLoading]);
+
+  const handleOrderSubmit = useCallback((data: OrderFormData) => {
+    setOrderFormOpen(false);
+    const lines = [
+      `Here are the order details:`,
+      `- Recipient's Full Name: ${data.recipientName}`,
+      `- Recipient's Phone Number: ${data.recipientPhone}`,
+      `- Delivery Address: ${data.deliveryAddress}`,
+      `- Desired Delivery Date: ${data.deliveryDate}`,
+      `- My Name (Sender): ${data.senderName}`,
+      data.giftMessage ? `- Gift Message: ${data.giftMessage}` : `- Gift Message: (none)`,
+    ];
+    handleSend(lines.join('\n'));
+  }, [handleSend]);
 
   return (
     <div className="h-screen bg-background flex justify-center">
@@ -58,7 +90,7 @@ export default function ChatShell() {
         <main className="flex-1 overflow-y-auto">
           {isEmpty
             ? <SuggestedPrompts onSelect={handleSend} />
-            : <MessageList messages={messages} isLoading={isLoading} />
+            : <MessageList messages={messages} isLoading={isLoading} onOrderForm={() => setOrderFormOpen(true)} />
           }
         </main>
 
@@ -71,6 +103,13 @@ export default function ChatShell() {
         </footer>
 
       </div>
+
+      {/* Order form popup */}
+      <OrderFormModal
+        open={orderFormOpen}
+        onClose={() => setOrderFormOpen(false)}
+        onSubmit={handleOrderSubmit}
+      />
     </div>
   );
 }
