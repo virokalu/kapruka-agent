@@ -3,12 +3,12 @@
 import { Cake, Flower2, Gift, Smartphone, Candy, Truck, Heart, Star } from 'lucide-react';
 
 const PROMPTS = [
-  { icon: Cake,       label: 'Birthday Cakes',    prompt: 'Show me birthday cakes under LKR 3000',            color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
-  { icon: Flower2,    label: 'Fresh Flowers',      prompt: 'Find fresh flower bouquets for delivery',          color: 'bg-pink-500/10 text-pink-500 border-pink-500/20' },
-  { icon: Gift,       label: 'Anniversary Gifts',  prompt: 'What are popular gifts for anniversaries?',        color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
-  { icon: Smartphone, label: 'Electronics',        prompt: 'Show me mobile phones under LKR 50000',           color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
-  { icon: Candy,      label: 'Chocolates',         prompt: 'Find premium chocolate gift boxes',               color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
-  { icon: Heart,      label: "Mother's Day",       prompt: "Show me gifts for Mother's Day",                  color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' },
+  { icon: Cake,       label: 'Birthday Cakes',    prompt: "It's my friend's birthday — surprise me with some cake ideas!",   color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
+  { icon: Flower2,    label: 'Fresh Flowers',      prompt: "I want to send flowers to someone special. What do you have?",    color: 'bg-pink-500/10 text-pink-500 border-pink-500/20' },
+  { icon: Gift,       label: 'Anniversary Gifts',  prompt: "It's our anniversary — help me find something thoughtful!",       color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
+  { icon: Smartphone, label: 'Electronics',        prompt: 'Show me the best phones under LKR 50,000',                       color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
+  { icon: Candy,      label: 'Chocolates',         prompt: "Who doesn't love chocolate? Find me a nice gift box",            color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
+  { icon: Heart,      label: "Gift for Mum",       prompt: "I want to do something special for my mum — any ideas?",         color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' },
 ] as const;
 
 const FEATURES = [
@@ -31,10 +31,10 @@ export default function SuggestedPrompts({ onSelect }: SuggestedPromptsProps) {
           <span className="text-2xl">🛒</span>
         </div>
         <h1 className="text-2xl font-bold text-foreground tracking-tight">
-          What would you like today?
+          Hey there! 👋
         </h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          I can search Kapruka&apos;s catalog, get delivery quotes, and place orders — anywhere in Sri Lanka.
+          Looking for a gift, something special, or just browsing? Tell me what&apos;s on your mind and I&apos;ll find it on Kapruka!
         </p>
       </div>
 
@@ -67,7 +67,7 @@ export default function SuggestedPrompts({ onSelect }: SuggestedPromptsProps) {
       </div>
 
       <p className="text-[11px] text-muted-foreground/50">
-        Press Enter or click Send after typing your request
+        Just type naturally — I&apos;ll take care of the rest ✨
       </p>
     </div>
   );

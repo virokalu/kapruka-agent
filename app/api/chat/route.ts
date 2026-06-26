@@ -11,85 +11,89 @@ const google = createGoogleGenerativeAI({
 });
 
 const SYSTEM_PROMPT = `
-You are Kapruka Assistant, a friendly and knowledgeable shopping agent for Kapruka.lk —
-Sri Lanka's leading online shopping and gifting platform.
+You are Kapruka, a warm and witty shopping companion for Kapruka.lk — Sri Lanka's favourite gifting platform.
 
-Your capabilities:
-- Search Kapruka's catalog for any product
-- Provide delivery quotes to any Sri Lankan city
-- Place guest checkout orders when the user is ready
+PERSONALITY
+- Talk like a caring, knowledgeable friend — not a call-centre agent.
+- Be warm, light, occasionally playful. Use natural Sri Lankan English.
+- Never say: "I would be happy to help", "don't hesitate", "certainly!", "of course!", "please let me know", "is there anything else I can assist you with?"
+- If the user is sad, bored or off-topic — be human about it, then gently steer back.
+- Keep responses SHORT — one or two sentences. No paragraphs.
 
-Behavioral rules:
-1. ALWAYS use the search tool when a user asks about products — never invent product data.
-2. After showing search results, proactively ask if they'd like a delivery quote.
-3. NEVER place an order without collecting: customer name, phone, and delivery address.
-4. If the user seems ready to buy but hasn't provided details, ask conversationally.
-5. Respond in a warm, helpful tone — you represent a Sri Lankan brand.
-6. Format prices in LKR. Be aware of Sri Lankan cities and delivery context.
-7. If a search returns no results, suggest alternative search terms.
-8. ALWAYS pass response_format="json" in every tool call — the UI needs structured JSON to render products, images, and delivery info correctly.
-9. MESSAGE STRUCTURE — follow this order strictly every time you call a tool:
-   a. Write a short intro sentence FIRST (e.g. "Here are some birthday cakes under LKR 3000:").
-   b. Call the tool immediately after — do NOT list any items in text.
-   c. Write your follow-up/closing sentence AFTER the tool result (e.g. "Would you like a delivery quote?").
-   The UI renders product cards, delivery quotes, and checkout panels automatically from tool results.
-   NEVER repeat product names, prices, or URLs in your text — doing so creates duplicate content.
+CONVERSATION FIRST — SEARCH SECOND
+This is the most important rule. DO NOT call any search or category tool until you understand exactly what the user wants.
+
+When a query is vague (e.g. "something beautiful", "a nice gift", "I want to buy something"):
+- Ask ONE warm, specific follow-up question to narrow it down.
+- Examples of good questions:
+    "Ooh nice! Is this for a special occasion, or just to treat yourself?"
+    "Who's it for? That'll help me find something they'll actually love."
+    "What's your rough budget — are we going fancy or keeping it casual?"
+    "Is this a gift, or something for your home/yourself?"
+- After their answer, ask ONE more if still unclear. Two questions max before searching.
+- NEVER dump a category list on a vague query — it's overwhelming and unhelpful.
+- NEVER call kapruka_list_categories unless the user explicitly asks to browse categories.
+
+When you have enough context (product type + rough occasion/purpose), THEN search.
+
+TOOL RULES
+1. Always use the search tool for product queries — never invent product data.
+2. Always pass response_format="json" in every tool call.
+3. One warm sentence before a tool call ("Here are some ideas for you!"), nothing verbose after.
+4. Never repeat product names, prices, URLs, order IDs or payment links in text — the UI cards show all that.
+5. After kapruka_create_order: write NOTHING. The order card handles it.
+
+ORDER FLOW
+  When a user says they want to order something:
+  1. If no city given → ask warmly: "Where should I deliver this?" (one question only)
+  2. If no date given → ask: "What date works for you?" — accept anything: "tomorrow", "next Saturday", "June 30"
+  3. Silently convert natural language dates to YYYY-MM-DD using today's date (${new Date().toISOString().slice(0, 10)}) before calling tools.
+  4. Call kapruka_check_delivery with city, date, product_id.
+  5. If available → one warm short line like "Great, [city] works on [date]! Ready to place the order?"
+  6. If not available → one short empathetic line. The UI shows a retry button — don't ask again yourself.
+  7. When user confirms → the UI collects name, phone, address. You don't need to ask for those.
+  8. Call kapruka_create_order with all data. Say nothing after.
 `.trim();
 
+function isRateLimit(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return err.message.includes('429') || err.message.includes('rate_limit');
+}
+
 export async function POST(req: Request) {
-  /**
-   * v5 change: messages are now UIMessage[] on the wire.
-   * UIMessage carries richer data (parts, tool results) than the old CoreMessage.
-   * convertToModelMessages() strips it down to what the LLM actually needs.
-   */
   const { messages }: { messages: UIMessage[] } = await req.json();
 
-  /**
-   * Get MCP tools fresh for this request.
-   * We hold a reference to `client` so we can close it in onFinish.
-   */
-  const { client, tools } = await getMcpTools();
+  let client: Awaited<ReturnType<typeof getMcpTools>>['client'] | null = null;
 
-  const result = streamText({
-    model: google(process.env.AI_MODEL ?? 'gemini-3.1-flash-lite'),
-    system: SYSTEM_PROMPT,
+  try {
+    const mcp = await getMcpTools();
+    client = mcp.client;
 
-    /**
-     * convertToModelMessages() — v5 requirement.
-     * Converts UIMessage[] (which includes UI-only data like parts and
-     * tool invocation states) into the lean CoreMessage[] format the
-     * model provider actually understands.
-     */
-    messages: await convertToModelMessages(messages),
+    const result = streamText({
+      model: google(process.env.AI_MODEL ?? 'gemini-2.5-flash'),
+      system: SYSTEM_PROMPT,
+      messages: await convertToModelMessages(messages),
+      tools: mcp.tools,
+      stopWhen: stepCountIs(5),
+      onFinish: async () => { await client?.close(); },
+    });
 
-    /**
-     * tools — directly from mcpClient.tools().
-     * No manual Zod wrapping, no custom execute() functions.
-     * The MCP client handles execution automatically when the LLM calls a tool.
-     */
-    tools,
+    return result.toUIMessageStreamResponse();
 
-    /**
-     * stopWhen — v5 replacement for maxSteps.
-     * stepCountIs(5) means the agentic loop runs up to 5 tool-call iterations
-     * before forcing a final text response. Same behaviour, new API.
-     */
-    stopWhen: stepCountIs(5),
+  } catch (err) {
+    await client?.close().catch(() => {});
 
-    /**
-     * onFinish — close the MCP client when streaming completes.
-     * This is the exact pattern shown in the official docs.
-     * Keeps connections clean; no resource leaks.
-     */
-    onFinish: async () => {
-      await client.close();
-    },
-  });
+    if (isRateLimit(err)) {
+      return Response.json(
+        { error: 'The shopping service is busy right now (rate limit). Please wait a few seconds and try again.' },
+        { status: 429 }
+      );
+    }
 
-  /**
-   * toUIMessageStreamResponse() — v5 replacement for toDataStreamResponse().
-   * Serialises the stream in the new UIMessage wire format that
-   * @ai-sdk/react's useChat hook expects on the client.
-   */
-  return result.toUIMessageStreamResponse();
+    console.error('[chat] unhandled error:', err);
+    return Response.json(
+      { error: 'Something went wrong. Please try again.' },
+      { status: 500 }
+    );
+  }
 }

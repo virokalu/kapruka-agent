@@ -1,122 +1,155 @@
 'use client';
 
-import { Truck, Clock, MapPin, CheckCircle2, Zap } from 'lucide-react';
-import { formatLKR, cn } from '@/lib/utils';
+import { Truck, MapPin, CheckCircle2, XCircle, Calendar, RefreshCw, Zap } from 'lucide-react';
+import { formatLKR } from '@/lib/utils';
 
-interface DeliveryOption {
-  type?: string;
-  label?: string;
-  name?: string;
-  price?: number;
-  cost?: number;
-  fee?: number;
-  estimatedDays?: number;
-  days?: number;
-  eta?: string;
-  available?: boolean;
+interface CheckResult {
+  city?:               string;
+  checked_date?:       string;
+  available?:          boolean;
+  rate?:               number;
+  currency?:           string;
+  reason?:             string | null;
+  next_available_date?: string | null;
+  perishable_warning?: string | null;
 }
 
-interface QuoteData {
-  city?: string;
-  deliveryCity?: string;
-  options?: DeliveryOption[];
-  deliveryOptions?: DeliveryOption[];
-  standardDelivery?: DeliveryOption;
-  expressDelivery?: DeliveryOption;
-  productName?: string;
-  product?: string;
-}
+function parseMcp(data: unknown): CheckResult | null {
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
 
-function normalise(data: unknown): { city: string; productName: string; options: DeliveryOption[] } {
-  const fallback = { city: '', productName: '', options: [] };
-  if (!data || typeof data !== 'object') return fallback;
-
-  const d = data as QuoteData;
-  const city        = d.city ?? d.deliveryCity ?? '';
-  const productName = d.productName ?? d.product ?? '';
-
-  let options: DeliveryOption[] = [];
-  if (Array.isArray(d.options))              options = d.options;
-  else if (Array.isArray(d.deliveryOptions)) options = d.deliveryOptions;
-  else {
-    if (d.standardDelivery) options.push({ label: 'Standard', ...d.standardDelivery });
-    if (d.expressDelivery)  options.push({ label: 'Express',  ...d.expressDelivery });
+  // Unwrap MCP envelope
+  if (Array.isArray(d.content)) {
+    for (const item of d.content as Array<{ type: string; text?: string }>) {
+      if (item.type === 'text' && item.text) {
+        try { return JSON.parse(item.text) as CheckResult; } catch { /* noop */ }
+      }
+    }
+  }
+  if (d.structuredContent && typeof d.structuredContent === 'object') {
+    const sc = d.structuredContent as Record<string, unknown>;
+    if (typeof sc.result === 'string') {
+      try { return JSON.parse(sc.result) as CheckResult; } catch { /* noop */ }
+    }
   }
 
-  return { city, productName, options };
+  // Already parsed
+  if ('available' in d || 'city' in d) return d as CheckResult;
+  return null;
 }
 
-function OptionRow({ option, index }: { option: DeliveryOption; index: number }) {
-  const label    = option.label ?? option.name ?? option.type ?? `Option ${index + 1}`;
-  const price    = option.price ?? option.cost ?? option.fee ?? 0;
-  const days     = option.estimatedDays ?? option.days;
-  const eta      = option.eta;
-  const isExpress = label.toLowerCase().includes('express');
-
-  return (
-    <div className={cn(
-      'flex items-center gap-3 p-3 rounded-xl border transition-all',
-      isExpress
-        ? 'border-accent/30 bg-accent/5 shadow-sm shadow-accent/10'
-        : 'border-border bg-card'
-    )}>
-      <div className={cn(
-        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-        isExpress ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
-      )}>
-        {isExpress ? <Zap size={14} /> : <Truck size={14} />}
-      </div>
-
-      <div className="flex-grow min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p className="text-xs font-semibold text-foreground">{label}</p>
-          {isExpress && (
-            <span className="px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-[9px] font-bold uppercase tracking-wider">
-              Fastest
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
-          <Clock size={9} />
-          <span>
-            {eta ?? (days !== undefined ? `${days} day${days !== 1 ? 's' : ''}` : 'Contact for ETA')}
-          </span>
-        </div>
-      </div>
-
-      <div className="text-right shrink-0">
-        <p className={cn('text-sm font-bold', isExpress ? 'text-accent' : 'text-foreground')}>
-          {price === 0 ? <span className="text-emerald-500">Free</span> : formatLKR(price)}
-        </p>
-      </div>
-    </div>
-  );
+function fmt(iso: string) {
+  return new Date(iso).toLocaleDateString('en-LK', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export default function DeliveryQuote({ data }: { data: unknown }) {
-  const { city, productName, options } = normalise(data);
+export default function DeliveryQuote({ data, onChangeCityDate, onPlaceOrder }: {
+  data: unknown;
+  onChangeCityDate?: (city: string, date: string) => void;
+  onPlaceOrder?: () => void;
+}) {
+  const r = parseMcp(data);
+  if (!r) return null;
+
+  const available = r.available ?? false;
+  const city      = r.city ?? '';
+  const date      = r.checked_date ?? '';
+  const rate      = r.rate ?? 0;
 
   return (
-    <div className="w-full rounded-2xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-muted/50">
+    <div className="w-full rounded-2xl border overflow-hidden" style={{
+      borderColor: available ? 'hsl(var(--border))' : 'hsl(var(--destructive) / 0.3)',
+      background: 'hsl(var(--card))',
+    }}>
+      {/* Header */}
+      <div
+        className="flex items-center gap-2.5 px-4 py-3 border-b"
+        style={{
+          background: available ? 'hsl(var(--muted))' : 'hsl(var(--destructive) / 0.08)',
+          borderColor: available ? 'hsl(var(--border))' : 'hsl(var(--destructive) / 0.2)',
+        }}
+      >
         <MapPin size={14} className="text-accent shrink-0" />
         <div className="flex-grow min-w-0">
           <p className="text-xs font-semibold text-foreground truncate">
             Delivery to {city || 'your address'}
           </p>
-          {productName && (
-            <p className="text-[10px] text-muted-foreground truncate">{productName}</p>
+          {date && (
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+              <Calendar size={9} /> {fmt(date)}
+            </p>
           )}
         </div>
-        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+        {available
+          ? <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+          : <XCircle     size={15} className="text-destructive shrink-0" />
+        }
       </div>
 
-      <div className="p-3 space-y-2">
-        {options.length > 0 ? (
-          options.map((opt, i) => <OptionRow key={i} option={opt} index={i} />)
+      {/* Body */}
+      <div className="px-4 py-3 space-y-2.5">
+        {available ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                <Truck size={16} className="text-accent-foreground" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-foreground">Delivery available</p>
+                <p className="text-[11px] text-muted-foreground">Flat rate</p>
+              </div>
+              <p className="ml-auto text-sm font-bold text-foreground">
+                {rate === 0 ? <span className="text-emerald-500">Free</span> : formatLKR(rate)}
+              </p>
+            </div>
+            {onPlaceOrder && (
+              <button
+                onClick={onPlaceOrder}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-accent-foreground text-xs font-semibold hover:bg-accent/90 active:scale-95 transition-all shadow-sm shadow-accent/20"
+              >
+                <Zap size={13} />
+                Place Order
+              </button>
+            )}
+            {onChangeCityDate && (
+              <button
+                onClick={() => onChangeCityDate(city, date)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-border text-muted-foreground text-xs font-medium hover:border-accent/40 hover:text-foreground transition-all"
+              >
+                <RefreshCw size={11} />
+                Change city or date
+              </button>
+            )}
+          </div>
         ) : (
-          <p className="text-xs text-muted-foreground py-2 px-1">
-            No delivery options available for this location.
+          <>
+            <div className="flex items-start gap-2.5">
+              <XCircle size={14} className="text-destructive shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-destructive">Not available on this date</p>
+                {r.reason && <p className="text-[11px] text-muted-foreground">{r.reason}</p>}
+                {r.next_available_date && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Next available: <span className="font-medium text-foreground">{fmt(r.next_available_date)}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {onChangeCityDate && (
+              <button
+                onClick={() => onChangeCityDate(city, date)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-accent/40 text-accent text-xs font-semibold hover:bg-accent/10 transition-all"
+              >
+                <RefreshCw size={12} />
+                Try a different city or date
+              </button>
+            )}
+          </>
+        )}
+
+        {r.perishable_warning && (
+          <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+            ⚠️ {r.perishable_warning}
           </p>
         )}
       </div>

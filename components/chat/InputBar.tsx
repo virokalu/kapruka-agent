@@ -8,9 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 interface InputBarProps {
   onSend: (text: string) => void;
   isLoading: boolean;
+  onType?: () => void;
 }
 
-export default function InputBar({ onSend, isLoading }: InputBarProps) {
+export default function InputBar({ onSend, isLoading, onType }: InputBarProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -47,7 +48,7 @@ export default function InputBar({ onSend, isLoading }: InputBarProps) {
       <Textarea
         ref={textareaRef}
         value={value}
-        onChange={e => setValue(e.target.value)}
+        onChange={e => { setValue(e.target.value); if (e.target.value) onType?.(); }}
         onKeyDown={handleKeyDown}
         placeholder="Search products, check delivery, place an order…"
         disabled={isLoading}

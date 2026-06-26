@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Star, Package, ExternalLink, Tag } from 'lucide-react';
+import { Zap, Star, Package, ExternalLink, Tag } from 'lucide-react';
 import { formatLKR, truncate, cn } from '@/lib/utils';
 
-interface KaprukProduct {
+export interface KaprukProduct {
   id?: string;
   name?: string;
   price?: number | { amount?: number; currency?: string };
@@ -22,7 +22,7 @@ interface KaprukProduct {
   summary?: string;
 }
 
-interface ProductGridProps { data: unknown }
+interface ProductGridProps { data: unknown; onOrder?: (msg: string) => void; onViewProduct?: (product: KaprukProduct) => void }
 
 function parseMarkdownProducts(text: string): KaprukProduct[] {
   const products: KaprukProduct[] = [];
@@ -84,7 +84,7 @@ function getCategory(product: KaprukProduct): string {
   return c.name ?? '';
 }
 
-function ProductCard({ product }: { product: KaprukProduct }) {
+function ProductCard({ product, onOrder, onViewProduct }: { product: KaprukProduct; onOrder?: (msg: string) => void; onViewProduct?: (product: KaprukProduct) => void }) {
   const name      = product.name ?? 'Product';
   const price     = getPrice(product);
   const original  = product.originalPrice ?? product.compare_at_price?.amount;
@@ -108,8 +108,13 @@ function ProductCard({ product }: { product: KaprukProduct }) {
 
   const showImage = imgSrc && !imgError;
 
+  const openDetail = () => { if (onViewProduct) onViewProduct(product); };
+
   return (
-    <div className="group flex flex-col rounded-2xl border border-border bg-card hover:border-accent/40 hover:shadow-md hover:shadow-accent/10 transition-all duration-200 overflow-hidden">
+    <div
+      className="group flex flex-col rounded-2xl border border-border bg-card hover:border-accent/40 hover:shadow-md hover:shadow-accent/10 transition-all duration-200 overflow-hidden cursor-pointer"
+      onClick={openDetail}
+    >
       {/* Image */}
       <div className="relative aspect-square bg-muted overflow-hidden">
         {showImage ? (
@@ -171,15 +176,23 @@ function ProductCard({ product }: { product: KaprukProduct }) {
         <div className="flex gap-1.5 mt-1">
           <button
             disabled={!available}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!available) return;
+              if (onViewProduct) { onViewProduct(product); return; }
+              if (!onOrder) return;
+              const priceStr = price ? ` (${formatLKR(price)})` : '';
+              onOrder(`I want to order "${name}"${priceStr}${product.id ? ` — product ID ${product.id}` : ''}.`);
+            }}
             className={cn(
               'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150',
-              available
-                ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+              available && onOrder
+                ? 'bg-accent text-accent-foreground hover:bg-accent/90 active:scale-95'
                 : 'bg-muted text-muted-foreground cursor-not-allowed opacity-60'
             )}
           >
-            <ShoppingCart size={11} />
-            {available ? 'Add to Order' : 'Unavailable'}
+            <Zap size={11} />
+            {available ? 'Order Now' : 'Unavailable'}
           </button>
 
           {url && (
@@ -187,6 +200,7 @@ function ProductCard({ product }: { product: KaprukProduct }) {
               href={url}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="w-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-accent/40 transition-all duration-150"
             >
               <ExternalLink size={11} />
@@ -198,7 +212,7 @@ function ProductCard({ product }: { product: KaprukProduct }) {
   );
 }
 
-export default function ProductGrid({ data }: ProductGridProps) {
+export default function ProductGrid({ data, onOrder, onViewProduct }: ProductGridProps) {
   const products = normalise(data);
 
   if (products.length === 0) {
@@ -227,7 +241,7 @@ export default function ProductGrid({ data }: ProductGridProps) {
       </p>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
         {products.map((product, i) => (
-          <ProductCard key={product.id ?? i} product={product} />
+          <ProductCard key={product.id ?? i} product={product} onOrder={onOrder} onViewProduct={onViewProduct} />
         ))}
       </div>
     </div>
