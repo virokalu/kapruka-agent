@@ -3,12 +3,12 @@
 import { Cake, Flower2, Gift, Smartphone, Candy, Truck, Heart, Star } from 'lucide-react';
 
 const PROMPTS = [
-  { icon: Cake,       label: 'Birthday Cakes',    prompt: "It's my friend's birthday — surprise me with some cake ideas!",   color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
-  { icon: Flower2,    label: 'Fresh Flowers',      prompt: "I want to send flowers to someone special. What do you have?",    color: 'bg-pink-500/10 text-pink-500 border-pink-500/20' },
-  { icon: Gift,       label: 'Anniversary Gifts',  prompt: "It's our anniversary — help me find something thoughtful!",       color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
-  { icon: Smartphone, label: 'Electronics',        prompt: 'Show me the best phones under LKR 50,000',                       color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
-  { icon: Candy,      label: 'Chocolates',         prompt: "Who doesn't love chocolate? Find me a nice gift box",            color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
-  { icon: Heart,      label: "Gift for Mum",       prompt: "I want to do something special for my mum — any ideas?",         color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' },
+  { icon: Cake,       label: 'Birthday Cakes',    prompt: 'Show me birthday cakes',                  color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
+  { icon: Flower2,    label: 'Fresh Flowers',      prompt: 'Browse fresh flowers',                    color: 'bg-pink-500/10 text-pink-500 border-pink-500/20' },
+  { icon: Gift,       label: 'Anniversary Gifts',  prompt: 'Find anniversary gift ideas',             color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
+  { icon: Smartphone, label: 'Electronics',        prompt: 'Show me electronics and gadgets',         color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
+  { icon: Candy,      label: 'Chocolates',         prompt: 'Find chocolates and sweet gift boxes',    color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
+  { icon: Heart,      label: 'Gift for Mum',       prompt: 'Find a special gift for mum',             color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' },
 ] as const;
 
 const FEATURES = [
