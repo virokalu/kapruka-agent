@@ -5,7 +5,7 @@ import { UIMessage } from 'ai';
 import {
   Search, Truck, ShoppingCart, Sparkles, ClipboardList,
   User, Phone, MapPin, Calendar, MessageSquare,
-  Package, Tag, ExternalLink, CheckCircle2, Clock, Zap,
+  Package, Tag, Clock, Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import ProductGrid, { type KaprukProduct } from '@/components/kapruka/ProductGrid';
 import DeliveryQuote from '@/components/kapruka/DeliveryQuote';
 import CheckoutPanel from '@/components/kapruka/CheckoutPanel';
+import OrderTrackingPanel from '@/components/kapruka/OrderTrackingPanel';
 import { detectOrderFormNeeded, type OrderFormData } from '@/components/kapruka/OrderFormModal';
 
 interface MessageListProps {
@@ -34,7 +35,7 @@ type ToolPart = MessagePart & Record<string, unknown>;
 /** Tools whose output makes the AI's verbal text 100% redundant */
 const SILENT_TOOLS = ['create_order', 'checkout'];
 /** Tools that should suppress outro text (but keep intro) */
-const VISUAL_TOOLS = ['search_products', 'get_product', 'check_delivery', 'list_categor', 'list_delivery'];
+const VISUAL_TOOLS = ['search_products', 'get_product', 'check_delivery', 'list_categor', 'list_delivery', 'track'];
 
 function toolName(p: MessagePart): string {
   return ((p as ToolPart).toolName as string | undefined) ?? '';
@@ -279,44 +280,6 @@ function parseMcpText(output: unknown): unknown {
   return output;
 }
 
-function TrackingCard({ data }: { data: unknown }) {
-  const parsed = parseMcpText(data) as Record<string, unknown> | null;
-  if (!parsed || typeof parsed !== 'object') return null;
-
-  const status  = (parsed.status ?? parsed.order_status) as string | undefined;
-  const orderId = (parsed.order_id ?? parsed.order_number ?? parsed.id) as string | undefined;
-  const updates = parsed.updates as Array<{ timestamp?: string; status?: string; message?: string }> | undefined;
-
-  return (
-    <div className="rounded-2xl border border-border overflow-hidden" style={{ background: 'hsl(var(--card))' }}>
-      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border" style={{ background: 'hsl(var(--muted))' }}>
-        <Clock size={14} className="text-accent shrink-0" />
-        <div>
-          <p className="text-xs font-semibold text-foreground">Order Tracking</p>
-          {orderId && <p className="text-[10px] text-muted-foreground font-mono">{orderId}</p>}
-        </div>
-        {status && (
-          <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-500 border border-emerald-500/25">
-            {status}
-          </span>
-        )}
-      </div>
-      {updates && updates.length > 0 && (
-        <div className="px-4 py-3 space-y-2">
-          {updates.map((u, i) => (
-            <div key={i} className="flex gap-2.5 text-xs">
-              <CheckCircle2 size={13} className="text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                {u.timestamp && <p className="text-[10px] text-muted-foreground">{u.timestamp}</p>}
-                <p className="text-foreground">{u.message ?? u.status}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function CategoryList({ data }: { data: unknown }) {
   const parsed = parseMcpText(data) as Record<string, unknown> | null;
@@ -412,7 +375,7 @@ function ToolPartRenderer({ part, lastOrderForm, onSend, onOrderNow, onDeliveryF
                                                                         return <DeliveryQuote data={output} onChangeCityDate={onDeliveryForm} onPlaceOrder={onOrderForm} />;
     if (toolName?.includes('create_order') || toolName?.includes('checkout'))
                                                                         return <CheckoutPanel data={output} lastOrderForm={lastOrderForm} />;
-    if (toolName?.includes('track'))                                    return <TrackingCard data={output} />;
+    if (toolName?.includes('track'))                                    return <OrderTrackingPanel data={output} />;
     if (toolName?.includes('categor'))                                  return <CategoryList data={output} />;
     if (toolName?.includes('cities'))                                   return <CitiesList data={output} />;
 
